@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Buscador de Teoremas — Álgebra Lineal</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    :root{--bg:#0b1220;--card:#111a2b;--muted:#9fb0d0;--text:#e8eefc;--border:rgba(255,255,255,.10);--shadow:0 12px 30px rgba(0,0,0,.35);--radius:16px;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 600px at 20% -10%, rgba(122,167,255,.25), transparent 60%),radial-gradient(900px 500px at 90% 10%, rgba(131,234,255,.12), transparent 55%),var(--bg);color:var(--text);}
+    header{padding:28px 18px 12px;max-width:1100px;margin:0 auto;}
+    h1{margin:0 0 8px;font-size:22px;letter-spacing:.2px}
+    .sub{margin:0;color:var(--muted);font-size:14px;line-height:1.45}
+    .wrap{max-width:1100px;margin:0 auto;padding:14px 18px 40px;}
+    .controls{display:grid;grid-template-columns:1.2fr .7fr .9fr auto;gap:10px;background:rgba(17,26,43,.75);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);backdrop-filter:blur(8px);}
+    @media (max-width:900px){.controls{grid-template-columns:1fr 1fr;}}
+    @media (max-width:520px){.controls{grid-template-columns:1fr;}}
+    input,select,button{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--border);background:rgba(9,14,26,.75);color:var(--text);outline:none;font-size:14px;}
+    input::placeholder{color:rgba(232,238,252,.55)}
+    button{cursor:pointer;background:linear-gradient(180deg, rgba(122,167,255,.22), rgba(122,167,255,.10));border:1px solid rgba(122,167,255,.35);font-weight:600;}
+    button:hover{filter:brightness(1.08)}
+    .stats{margin:14px 4px 10px;color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:rgba(17,26,43,.55);}
+    .list{display:grid;gap:10px;margin-top:10px;}
+    details.card{background:rgba(17,26,43,.78);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    summary{list-style:none;cursor:pointer;padding:14px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+    summary::-webkit-details-marker{display:none}
+    .title{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .title strong{font-size:14.5px;letter-spacing:.2px;word-break:break-word;}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+    .badge{border:1px solid var(--border);border-radius:999px;padding:3px 8px;background:rgba(9,14,26,.55);white-space:nowrap;}
+    .caret{color:rgba(232,238,252,.7);font-size:13px;padding-top:2px;flex:0 0 auto;}
+    .content{padding:0 14px 14px;color:rgba(232,238,252,.92);line-height:1.55;font-size:14px;border-top:1px solid rgba(255,255,255,.06);}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .mini{width:auto;padding:8px 10px;border-radius:10px;font-size:13px;background:rgba(9,14,26,.75);border:1px solid var(--border);}
+    mark{background:rgba(255,227,120,.22);border:1px solid rgba(255,227,120,.28);color:var(--text);padding:0 .15em;border-radius:6px;}
+    .empty{padding:18px;border:1px dashed rgba(255,255,255,.18);border-radius:var(--radius);color:var(--muted);background:rgba(17,26,43,.35);text-align:center;}
+    footer{max-width:1100px;margin:0 auto;padding:0 18px 30px;color:rgba(159,176,208,.9);font-size:12px;line-height:1.45;}
+    code.k{background:rgba(9,14,26,.6);border:1px solid rgba(255,255,255,.10);padding:.1em .35em;border-radius:8px;color:rgba(232,238,252,.95);}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Buscador de Teoremas — Álgebra Lineal</h1>
+  <p class="sub">
+    Busca por palabra clave (ej. <code class="k">invertible</code>, <code class="k">det</code>, <code class="k">subespacio</code>, <code class="k">Cramer</code>),
+    filtra por parcial/tema, y abre cada tarjeta para ver el enunciado completo.
+  </p>
+</header>
+
+<div class="wrap">
+  <div class="controls">
+    <input id="q" type="search" placeholder="Buscar en título o contenido (ej. determinante, RREF, base, traza...)" />
+    <select id="section"><option value="">Todos los parciales</option></select>
+    <select id="topic"><option value="">Todos los temas</option></select>
+    <button id="clear" title="Limpiar filtros">Limpiar</button>
+  </div>
+
+  <div class="stats">
+    <span class="pill" id="count">0 resultados</span>
+    <span class="pill" id="total">0 teoremas cargados</span>
+    <span class="pill" id="hint">Tip: prueba con “det(A)”, “L.I.”, “subespacio”, “producto”</span>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<footer>
+  <div>
+    Si no se ven fórmulas, revisa que tengas internet (MathJax se carga desde CDN).
+    Puedes subir este <code class="k">index.html</code> a GitHub Pages para compartirlo como página web.
+  </div>
+</footer>
+
+<script>
+  const THEOREMS = [
+  {
+    "id": "T1.1",
+    "label": "Teorema 1.1",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Todo sistema de ecuaciones lineales homogéneas que tiene que tiene más incógnitas que ecuaciones tiene infinidad de soluciones."
+  },
+  {
+    "id": "T1.2",
+    "label": "Teorema 1.2",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Si A y B son matrices cuadradas nxn  y si kER entonces.\ntr(A+B) = tr (A) + tr(B)\ntr(kA) = ktr(A)"
+  },
+  {
+    "id": "T1.3",
+    "label": "Teorema 1.3",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A, B y C matrices cuyos tamaños permiten las operaciones abajo enunciadas y sus m,n escalares. Entonces se cumple:\nA+B = B+A\nA+(B+C) = (A+B)+C\nA(B+C) = (AB)C\nA(B+C) = AB+AC\n(AB)C = AC+BC\n(m+n)A = mA+nA\nm(A+B) = mA+mB\n(mA)B = A(mB) = mAB\nm(nA) = (mn)A"
+  },
+  {
+    "id": "T1.4",
+    "label": "Teorema 1.4: Propiedades de las matrices cero.",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "A+0 = A\nA+(-A) = A-A = 0\n0A = 0\nA0 = 0"
+  },
+  {
+    "id": "T1.5",
+    "label": "Teorema 1.5",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada nxn y sea R la forma escalonada reducida de A, entonces o R tiene por lo menos un renglón de ceros o R es la matriz identidad In.\nDemostración.\nSi R es la escalonada reducida de A, asi o R tiene un renglón de ceros (por lo menos) o no tiene.\nSi R no tiene renglones de ceros al momento de recorrer la matriz R de arriba hacia abajo. Los unos principales se encuentran en la diagonal principal, de modo que R es la matriz identidad."
+  },
+  {
+    "id": "T1.6",
+    "label": "Teorema 1.6",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea una matriz invertible  y sea B una inversa de A, se debe tener que:  C=B\nDemostración:\nComo B  es una inversa de A, así\nAB = I ………. 1\nBA = I ………. 2\nMultiplicar a 1 por C por la izquierda.\nC(AB) = CI\nPor el teorema 1.3c)\nC(A) = C"
+  },
+  {
+    "id": "T1.7",
+    "label": "Teorema 1.7",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada 2x2 como:\nA=\nSi ad-bc es ≠ 0, entonces A es invertible y  ="
+  },
+  {
+    "id": "T1.8",
+    "label": "Teorema 1.8",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Si A y B son matrices invertibles del mismo tamaño, entonces AB también es invertible y  =\nDemostración\n=  …… 1\n=  …….2\nPero\n( ) =   =  =  =\nY también\n((AB) = ( =  IB =  =\nDe modo que  ="
+  },
+  {
+    "id": "T1.9",
+    "label": "Teorema 1.9",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A y B matrices cuadradas del mismo tamaño.\nSi AB es invertible, entonces, tanto A como B deben ser invertibles."
+  },
+  {
+    "id": "T1.10",
+    "label": "Teorema 1.10",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada de tamaño nxn:\nSi B es una matriz cuadrada, del mismo tamaño que A, tal que AB=I, entonces A es invertible y\nSi B es una matriz cuadrad, del mismo tamaño que A, tal que BA=I, entonces A es invertible y"
+  },
+  {
+    "id": "T1.11",
+    "label": "Teorema 1.11",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A y B matrices cuyos tamaños permitan las operaciones abajo enunciadas y sea kER\n= A\n= +\n=\n= k"
+  },
+  {
+    "id": "T1.12",
+    "label": "Teorema 1.12",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada y rEN, sEN\nEsto se cumple:\n+  =\n="
+  },
+  {
+    "id": "T1.13",
+    "label": "Teorema 1.13",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada e invertible y sean nEN, también, sea kER, con k≠0. Esto se cumple.\n= A\n=\n=\nDemostración a)\nComo\nDe donde puedes obtener que  = A\nDemostración b)\n=\nPero\n= (A x A ….. x A)  =\nDe modo que =\nDemostración c)\n(KA)=            y              ((KA)=\nPero\n(KA) = (K\nY\n((KA)= (K\nDe modo que\n="
+  },
+  {
+    "id": "T1.14",
+    "label": "Teorema 1.14",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Si A es una matriz cuadrada e invertible, entonces su  también es invertible\n=\nDemostración\n=        y            =\nPor\n= = =\nY también\n= = =\nDe modo que\n="
+  },
+  {
+    "id": "T1.15",
+    "label": "Teorema 1.15",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz de tamaño mxn y sea E una matriz elemental, pero se obtiene al aplicar cierta operación elemental por renglón a la matriz identidad Im.\nEntonces la matriz EA es la matriz que se obtiene al aplicar directamente la misma operación elemental por renglón a la matriz A.\nOperaciones elementales en los renglones y operaciones elementales inversas."
+  },
+  {
+    "id": "T1.16",
+    "label": "Teorema 1.16",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Toda matriz elemental es invertible y su inversa es también una matriz elemental.\nDemostración.\nSea E una matriz elemental que se obtiene al aplicar cierta operación elemental por renglón a la matriz identidad In y sea  la matriz elemental que se obtiene al aplicar la correspondiente operación elemental inversa a In.\nLuego\nE            y\nPor el T# 1.11  a)  y  b)\nSe tiene que E y   sea invertible."
+  },
+  {
+    "id": "T1.17",
+    "label": "Teorema 1.17",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada tamaño nxn entonces las siguientes proposiciones son equivalentes, es decir, todas son verdaderas o todas son falsas.\nA es invertible.\nEl sistema de ecuaciones lineales homogéneas solo tiene solución trivial.\nLa forma escalonada reducida de A es In.\nA puede expresarse como un producto de matrices elementales.\nDemostración:\nDemostramos la equivalencia de las proposiciones con la siguiente cadena de implicaciones.\na)-> b),      b)  ->  c),     c)  ->  d)     y    d)  ->  a)\nAsí\na)->  b)\nSi A es invertible, entonces el sistema de ecuaciones homogéneo A= solo tiene solución trivial.\nCiertamente = es solución de A= así\nA= ……. 1\nComo A es invertible, multiplicamos por  a  1\n(A=\nLuego\n= 0     ie: I=\nO bien\n=\nDe modo que A= solo tiene la solución trivial."
+  },
+  {
+    "id": "T1.18",
+    "label": "Teorema 1.18",
+    "section": "Parcial I",
+    "topic": "Teoremas (Docx)",
+    "text": "Sea A una matriz cuadrada nxn y sea  una matriz nx1.\nSi A es invertible entonces A tiene solución única, a saber,\nDemostramos ciertamente   es solución de Apero\n=\nSea  cualquier otra solución de A , así que se tiene\nA= ….. 1\nMultiplicando a 1 por  por la izq se tiene\nLuego\n=\nDe modo que la solución es única."
+  },
+  {
+    "id": "T2.1",
+    "label": "Teorema 2.1",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $A$ es $n \\times n$, entonces $|A| = |A^T|$."
+  },
+  {
+    "id": "T2.2",
+    "label": "Teorema 2.2",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Sea $A$ una matriz cuadrada $n \\times n$. Si $A$ tiene un renglón (o una columna) de\nceros, entonces $ \\text{det}(A) = 0$."
+  },
+  {
+    "id": "PII.1",
+    "label": "Propiedad 1: Fundamental",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si un determinante tiene dos renglones (o columnas) iguales, entonces ese determinante\nes igual a cero."
+  },
+  {
+    "id": "T2.3",
+    "label": "Teorema 2.3",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Sea $A$ una matriz cuadrada $n \\times n$. Si $ \\text{det}(A) \\neq 0$, entonces $A$ es\ninvertible y:\n$$A^{ -1} = \\frac{1}{ \\text{det}(A)} \\text{adj}(A)$$"
+  },
+  {
+    "id": "T2.4",
+    "label": "Teorema 2.4: Regla de Cramer",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $A$ es $n \\times n$ y $ \\text{det}(A) \\neq 0$, para el sistema $A \\vec{x} = \\vec{b}$, la\nsolución es:\n$$x_j = \\frac{ \\text{det}(A_j)}{ \\text{det}(A)}$$\nDonde $A_j$ se obtiene al sustituir la columna $j$ de $A$ por el vector $ \\vec{b}$."
+  },
+  {
+    "id": "T2.5",
+    "label": "Teorema 2.5",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $A$ es una matriz triangular, $ \\text{det}(A)$ es el producto de los elementos de la\ndiagonal principal."
+  },
+  {
+    "id": "PII.2",
+    "label": "Propiedad 2: Fundamental (n -linealidad)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Los determinantes son lineales por renglón. Se pueden separar sumas y factorizar\nescalares en un renglón manteniendo fijos los demás."
+  },
+  {
+    "id": "T2.6",
+    "label": "Teorema 2.6: (Efecto de Operaciones Elementales)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "• a) Intercambio:  $\\text{det}(B) = -\\text{det}(A)$ .\n• b) Multiplicación por escalar $k$: $\\text{det}(B) = k \\cdot \\text{det}(A)$ .\n• c) Suma de múltiplo de un renglón:  $\\text{det}(B) = \\text{det}(A)$ ."
+  },
+  {
+    "id": "T2.7",
+    "label": "Teorema 2.7: (Matrices Elementales $E$)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "• a) Intercambio:  $\\text{det}(E) = -1$.\n• b) Multiplicación por $k$: $\\text{det}(E) = k$ .\n• c) Suma de múltiplo:  $\\text{det}(E) = 1$ ."
+  },
+  {
+    "id": "T2.8",
+    "label": "Teorema 2.8",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $A$ tiene dos renglones (o columnas) proporcionales, entonces $ \\text{det}(A) = 0$."
+  },
+  {
+    "id": "T2.9",
+    "label": "Teorema 2.9",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$\\text{det}(EB) = \\text{det}(E) \\text{det}(B)$ (donde $E$ es matriz elemental)."
+  },
+  {
+    "id": "T2.10",
+    "label": "Teorema 2.10",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$A$ es invertible si y solo si $ \\text{det}(A) \\neq 0$."
+  },
+  {
+    "id": "T2.11",
+    "label": "Teorema 2.11: (Equivalencias de Invertibilidad)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$A$ es invertible $ \\iff$ $A \\vec{x}= \\vec{0}$ tiene solo solución trivial $ \\iff$ RREF de $A$ es\n$I_n$ $ \\iff$ $A$ es producto de matrices elementales $ \\iff$ $A \\vec{x}= \\vec{b}$ tiene\nsolución única $ \\iff$ $ \\text{det}(A) \\neq 0$."
+  },
+  {
+    "id": "T2.12",
+    "label": "Teorema 2.12",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$\\text{det}(AB) = \\text{det}(A) \\cdot \\text{det}(B)$."
+  },
+  {
+    "id": "T2.13",
+    "label": "Teorema 2.13",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$\\text{det}(A^{ -1}) = \\frac{1}{ \\text{det}(A)}$."
+  },
+  {
+    "id": "T2.14",
+    "label": "Teorema 2.14",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si el renglón $i$ de $C$ es la suma de los renglones $i$ de $A$ y $B$ (y los demás\nrenglones son iguales), entonces $ \\text{det}(C) = \\text{det}(A) + \\text{det}(B)$.\nFormulario FMMI (Resumen de Adjudicadas)\n1. $|kA| = k^n |A|$\n2. $|\\text{adj}(A)| = |A|^{n -1}$\n3. $\\text{adj}(A^{ -1}) = [ \\text{adj}(A)]^{ -1}$\n4. $\\text{adj}( \\text{adj}(A)) = |A|^{n -2} A$\n5. $|\\text{adj}( \\text{adj}(A))| = |A|^{(n -1)^2}$\n2. Espacios Vectoriales y Subespacios"
+  },
+  {
+    "id": "T2.15",
+    "label": "Teorema 2.15: (Vector Cero)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Propiedades: $0 \\vec{u} = \\vec{0}$, $k \\vec{0} = \\vec{0}$, $( -1)\\vec{u} = -\\vec{u}$, y si\n$k\\vec{u} = \\vec{0}$ entonces $k=0$ o $ \\vec{u}= \\vec{0}$."
+  },
+  {
+    "id": "T2.16",
+    "label": "Teorema 2.16: (Criterio de Subespacio)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "$W \\subseteq V$ es subespacio si:\n• a) $\\vec{u}, \\vec{v} \\in W \\implies \\vec{u} + \\vec{v} \\in W$ .\n• b) $\\vec{u} \\in W, k \\in F \\implies k \\vec{u} \\in W$ ."
+  },
+  {
+    "id": "T2.17",
+    "label": "Teorema 2.17",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "El vector cero siempre forma un subespacio (subespacio cero)."
+  },
+  {
+    "id": "T2.18",
+    "label": "Teorema 2.18",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "El conjunto solución de $A \\vec{x} = \\vec{0}$ es un subespacio de $ \\mathbb{R}^n$."
+  },
+  {
+    "id": "T2.19",
+    "label": "Teorema 2.19",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "El conjunto de todas las combinaciones lineales de $S$ es el subespacio más pequeño que\ncontiene a $S$."
+  },
+  {
+    "id": "T2.20",
+    "label": "Teorema 2.20",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Dos conjuntos $S$ y $S'$ generan el mismo espacio si cada vector de $S$ es combinación\nlineal de $S'$ y viceversa.\n3. Independencia Lineal, Bases y Dimensión"
+  },
+  {
+    "id": "T2.21",
+    "label": "Teorema 2.21",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "• a) Si $S$ contiene al vector cero, es L.D.\n• b) Si $S$ tiene dos vectores, es L.I. si no son múltiplos entre sí."
+  },
+  {
+    "id": "T2.22",
+    "label": "Teorema 2.22",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "En $ \\mathbb{R}^n$, si un conjunto tiene $k > n$ vectores, es L.D."
+  },
+  {
+    "id": "T2.23",
+    "label": "Teorema 2.23",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Un conjunto es L.D. $ \\iff$ al menos uno de sus vectores es combinación lineal de los\ndemás. Es L.I. $ \\iff$ ninguno es combinación lineal de los demás."
+  },
+  {
+    "id": "T2.24",
+    "label": "Teorema 2.24: (Wronskiano)",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Para funciones en $C^{(n -1)}$, si $W(f_1, \\dots, f_n) \\neq 0$, son L.I."
+  },
+  {
+    "id": "T2.25",
+    "label": "Teorema 2.25",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $B$ es base de $V$, todo $ \\vec{v} \\in V$ se expresa de forma única como $ \\vec{v} =\nc_1\\vec{v}_1 + \\dots + c_n \\vec{v}_n$."
+  },
+  {
+    "id": "T2.26",
+    "label": "Teorema 2.26",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "En un espacio de dimensión $n$:\n• a) Más de $n$ vectores $\\implies$  L.D.\n• b) Menos de $n$ vectores $\\implies$  No generan a $V$."
+  },
+  {
+    "id": "T2.27",
+    "label": "Teorema 2.27",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Todas las bases de un espacio de dimensión finita tienen el mismo número de vectores."
+  },
+  {
+    "id": "T2.28",
+    "label": "Teorema 2.28",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "• a) Si $S$ es L.I. y $\\vec{v} \\notin \\text{gen}(S)$ , entonces $S \\cup \\{\\vec{v} \\}$ es L.I.\n• b) Si $\\vec{v}$  es combinación lineal de los demás en $S$, entonces $\\text{gen}(S)\n= \\text{gen}(S - \\{\\vec{v} \\})$."
+  },
+  {
+    "id": "T2.29",
+    "label": "Teorema 2.29",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $V$ tiene dimensión $n$, un conjunto de exactamente $n$ vectores es base si es L.I. o si\ngenera a $V$."
+  },
+  {
+    "id": "T2.30",
+    "label": "Teorema 2.30",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "• a) Reducción:  Si $S$ genera a $V$ pero no es base, se puede reducir a una base\nquitando vectores.\n• b) Extensión:  Si $S$ es L.I. pero no es base, se puede agrandar a una base\nagregando vectores."
+  },
+  {
+    "id": "T2.31",
+    "label": "Teorema 2.31",
+    "section": "Parcial II",
+    "topic": "Determinantes y Propiedades",
+    "text": "Si $W$ es subespacio de $V$: $ \\text{dim}(W) \\leq \\text{dim}(V)$. Si las dimensiones son\niguales, $W = V$."
+  }
+];
+
+  const $ = (id) => document.getElementById(id);
+
+  function normalize(str){
+    return (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function escapeHtml(s){
+    return (s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  }
+  function highlight(text, query){
+    if(!query) return escapeHtml(text);
+    const safe = escapeHtml(text);
+    const q = query.trim();
+    if(!q) return safe;
+    const qEsc = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return safe.replace(new RegExp(qEsc, "gi"), (m)=>`<mark>${escapeHtml(m)}</mark>`);
+  }
+  function idSortKey(id){
+    const m = /^T(\d+)\.(\d+)/.exec(id);
+    if(m) return [Number(m[1]), Number(m[2])];
+    const p = /^P/.exec(id);
+    if(p) return [98, 0];
+    return [999, 999];
+  }
+  function uniq(arr){ return [...new Set(arr)].filter(Boolean); }
+
+  const sections = uniq(THEOREMS.map(t => t.section)).sort((a,b)=>a.localeCompare(b));
+  for(const s of sections){
+    const opt = document.createElement("option");
+    opt.value = s; opt.textContent = s;
+    $("section").appendChild(opt);
+  }
+
+  function refreshTopics(){
+    const selectedSection = $("section").value;
+    const topics = uniq(
+      THEOREMS.filter(t => !selectedSection || t.section === selectedSection).map(t => t.topic)
+    ).sort((a,b)=>a.localeCompare(b));
+    $("topic").innerHTML = `<option value="">Todos los temas</option>`;
+    for(const tp of topics){
+      const opt = document.createElement("option");
+      opt.value = tp; opt.textContent = tp;
+      $("topic").appendChild(opt);
+    }
+  }
+
+  function render(){
+    const query = $("q").value.trim();
+    const section = $("section").value;
+    const topic = $("topic").value;
+
+    let items = THEOREMS.slice();
+    if(section) items = items.filter(t => t.section === section);
+    if(topic) items = items.filter(t => t.topic === topic);
+    if(query){
+      const nq = normalize(query);
+      items = items.filter(t => normalize(`${t.label} ${t.text}`).includes(nq));
+    }
+
+    items.sort((a,b)=>{
+      const sa = a.section.localeCompare(b.section);
+      if(sa !== 0) return sa;
+      const [a1,a2] = idSortKey(a.id);
+      const [b1,b2] = idSortKey(b.id);
+      if(a1 !== b1) return a1 - b1;
+      return a2 - b2;
+    });
+
+    $("count").textContent = `${items.length} resultado${items.length===1?"":"s"}`;
+    $("total").textContent = `${THEOREMS.length} teoremas cargados`;
+
+    const list = $("list");
+    list.innerHTML = "";
+
+    if(items.length === 0){
+      list.innerHTML = `<div class="empty">No encontré coincidencias. Prueba con otra palabra (ej. “invertible”, “det”, “base”, “subespacio”, “RREF”).</div>`;
+      return;
+    }
+
+    for(const t of items){
+      const details = document.createElement("details");
+      details.className = "card";
+      const shortPreview = t.text.length > 220 ? (t.text.slice(0, 220) + "…") : t.text;
+
+      details.innerHTML = `
+        <summary>
+          <div class="title">
+            <strong>${highlight(t.label, query)}</strong>
+            <div class="meta">
+              <span class="badge">${escapeHtml(t.id)}</span>
+              <span class="badge">${escapeHtml(t.section)}</span>
+              <span class="badge">${escapeHtml(t.topic)}</span>
+            </div>
+          </div>
+          <div class="caret">▾</div>
+        </summary>
+        <div class="content">
+          <div>${highlight(t.text, query)}</div>
+          <div class="actions">
+            <button class="mini" data-copy="${escapeHtml(t.id)}">Copiar teorema</button>
+            <button class="mini" data-copyall="${escapeHtml(t.id)}">Copiar título + contenido</button>
+          </div>
+          <div style="margin-top:10px; color: rgba(159,176,208,.95); font-size:12px;">
+            Vista previa: ${highlight(shortPreview, query)}
+          </div>
+        </div>
+      `;
+      list.appendChild(details);
+    }
+
+    if(window.MathJax && window.MathJax.typesetPromise) MathJax.typesetPromise();
+  }
+
+  document.addEventListener("click", async (ev)=>{
+    const btn = ev.target.closest("button");
+    if(!btn) return;
+    const id = btn.getAttribute("data-copy") || btn.getAttribute("data-copyall");
+    if(!id) return;
+    const t = THEOREMS.find(x => x.id === id);
+    if(!t) return;
+
+    const toCopy = btn.hasAttribute("data-copyall")
+      ? `${t.label}\n(${t.section} — ${t.topic})\n\n${t.text}`
+      : t.text;
+
+    try{
+      await navigator.clipboard.writeText(toCopy);
+      const old = btn.textContent;
+      btn.textContent = "¡Copiado!";
+      setTimeout(()=>btn.textContent = old, 900);
+    }catch(e){
+      alert("No pude copiar. Intenta manualmente seleccionando el texto.");
+    }
+  });
+
+  $("q").addEventListener("input", render);
+  $("section").addEventListener("change", ()=>{ refreshTopics(); render(); });
+  $("topic").addEventListener("change", render);
+  $("clear").addEventListener("click", ()=>{
+    $("q").value = "";
+    $("section").value = "";
+    refreshTopics();
+    $("topic").value = "";
+    render();
+  });
+
+  refreshTopics();
+  render();
+</script>
+</body>
+</html>
